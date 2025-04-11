@@ -1,15 +1,24 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Bell, MessageSquare, Menu, User, BarChart2 } from 'lucide-react';
+import { Bell, MessageSquare, Menu, User, BarChart2, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const Navbar = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const { toast } = useToast();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleNotificationClick = () => {
+    toast({
+      title: "No new notifications",
+      description: "You're all caught up!",
+    });
+  };
 
   const NavLink = ({ to, children, icon: Icon }: { to: string; children: React.ReactNode; icon: React.ComponentType<any> }) => (
     <Link
@@ -27,20 +36,20 @@ const Navbar = () => {
   );
 
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
           {/* Logo and desktop nav */}
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="flex items-center">
+              <Link to="/dashboard" className="flex items-center">
                 <BarChart2 className="h-8 w-8 text-wf-gold" />
                 <span className="ml-2 text-xl font-bold text-wf-navy">Wealth Forge</span>
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-2">
               <NavLink to="/dashboard" icon={BarChart2}>Dashboard</NavLink>
-              <NavLink to="/projects" icon={BarChart2}>Projects</NavLink>
+              <NavLink to="/projects" icon={Briefcase}>Projects</NavLink>
               <NavLink to="/messages" icon={MessageSquare}>Messages</NavLink>
             </div>
           </div>
@@ -59,11 +68,13 @@ const Navbar = () => {
 
           {/* User navigation */}
           <div className="hidden sm:flex sm:items-center sm:ml-6 gap-1">
-            <Button variant="ghost" size="icon" className="rounded-full">
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={handleNotificationClick}>
               <Bell className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <MessageSquare className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="rounded-full" asChild>
+              <Link to="/messages">
+                <MessageSquare className="h-5 w-5" />
+              </Link>
             </Button>
             <Link to="/profile">
               <Button variant="ghost" size="icon" className="rounded-full">
@@ -79,7 +90,7 @@ const Navbar = () => {
         <div className="sm:hidden">
           <div className="pt-2 pb-3 space-y-1 px-2">
             <NavLink to="/dashboard" icon={BarChart2}>Dashboard</NavLink>
-            <NavLink to="/projects" icon={BarChart2}>Projects</NavLink>
+            <NavLink to="/projects" icon={Briefcase}>Projects</NavLink>
             <NavLink to="/messages" icon={MessageSquare}>Messages</NavLink>
             <NavLink to="/profile" icon={User}>Profile</NavLink>
           </div>

@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import ProjectCard, { ProjectCardProps } from './ProjectCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -75,9 +76,11 @@ const ProjectList = () => {
     <div className="w-full max-w-5xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Discover Projects</h1>
-        <Button className="shrink-0 gap-2">
-          <Plus size={16} />
-          <span>Post a Project</span>
+        <Button className="shrink-0 gap-2" asChild>
+          <Link to="/projects/create">
+            <Plus size={16} />
+            <span>Post a Project</span>
+          </Link>
         </Button>
       </div>
       

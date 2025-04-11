@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from '@/components/ui/layout/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +8,6 @@ import ProjectCard, { ProjectCardProps } from '@/components/projects/ProjectCard
 import { TrendingUp, Users, UserPlus, MessageSquare, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// Sample project data
 const featuredProjects: ProjectCardProps[] = [
   {
     id: '1',
@@ -44,7 +42,6 @@ const featuredProjects: ProjectCardProps[] = [
   },
 ];
 
-// Sample connection suggestions
 const connectionSuggestions = [
   {
     id: 'user5',
@@ -78,7 +75,6 @@ const Dashboard = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-2">Welcome back, John</h1>
           <p className="text-muted-foreground">
@@ -86,7 +82,6 @@ const Dashboard = () => {
           </p>
         </div>
         
-        {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardContent className="p-6 flex items-center justify-between">
@@ -140,9 +135,7 @@ const Dashboard = () => {
           </Card>
         </div>
         
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Featured Projects */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Featured Projects</h2>
@@ -203,9 +196,7 @@ const Dashboard = () => {
             </Card>
           </div>
           
-          {/* Sidebar Content */}
           <div className="space-y-6">
-            {/* Profile Card */}
             <Card>
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center text-center">
@@ -229,7 +220,6 @@ const Dashboard = () => {
               </CardContent>
             </Card>
             
-            {/* Connection Suggestions */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle>Suggested Connections</CardTitle>
@@ -264,7 +254,6 @@ const Dashboard = () => {
               </CardContent>
             </Card>
             
-            {/* Quick Links */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle>Quick Links</CardTitle>
@@ -274,8 +263,8 @@ const Dashboard = () => {
                   <Button variant="outline" className="w-full justify-start" asChild>
                     <Link to="/projects">Browse All Projects</Link>
                   </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    Post a New Project
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/projects/create">Post a New Project</Link>
                   </Button>
                   <Button variant="outline" className="w-full justify-start">
                     Find Investors
