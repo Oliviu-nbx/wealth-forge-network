@@ -50,7 +50,23 @@ const AdminPanel = () => {
   useEffect(() => {
     const storedProjects = localStorage.getItem('wealthforge_projects');
     if (storedProjects) {
-      setProjects(JSON.parse(storedProjects));
+      try {
+        const parsedProjects = JSON.parse(storedProjects);
+        
+        // Ensure that each project has a valid status
+        const typedProjects: ProjectData[] = parsedProjects.map((project: any) => ({
+          ...project,
+          // Make sure status is one of the allowed values
+          status: ['pending', 'approved', 'rejected'].includes(project.status) 
+            ? project.status as 'pending' | 'approved' | 'rejected'
+            : 'pending' // Default to pending if invalid status
+        }));
+        
+        setProjects(typedProjects);
+      } catch (error) {
+        console.error("Error parsing projects:", error);
+        setProjects([]);
+      }
     }
     
     // For demo purposes, create mock users
@@ -78,7 +94,7 @@ const AdminPanel = () => {
 
   const handleApproveProject = (id: string) => {
     const updatedProjects = projects.map(project => 
-      project.id === id ? { ...project, status: 'approved' } : project
+      project.id === id ? { ...project, status: 'approved' as const } : project
     );
     setProjects(updatedProjects);
     localStorage.setItem('wealthforge_projects', JSON.stringify(updatedProjects));
@@ -90,7 +106,7 @@ const AdminPanel = () => {
 
   const handleRejectProject = (id: string) => {
     const updatedProjects = projects.map(project => 
-      project.id === id ? { ...project, status: 'rejected' } : project
+      project.id === id ? { ...project, status: 'rejected' as const } : project
     );
     setProjects(updatedProjects);
     localStorage.setItem('wealthforge_projects', JSON.stringify(updatedProjects));
