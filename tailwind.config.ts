@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Wealth Forge custom colors
+				wf: {
+					navy: '#0A2342',
+					gold: '#FFD700',
+					silver: '#C0C0C0',
+					charcoal: '#2D3142',
+					offwhite: '#F8F8FF'
 				}
 			},
 			borderRadius: {
