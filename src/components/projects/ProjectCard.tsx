@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Building2, Users, MapPin, Banknote, ArrowUpRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,9 +99,11 @@ const ProjectCard = ({
           <Users size={16} className="text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Looking for partners</span>
         </div>
-        <Button size="sm" className="gap-1">
-          <span>View</span>
-          <ArrowUpRight size={14} />
+        <Button size="sm" className="gap-1" asChild>
+          <Link to={`/projects/${id}`}>
+            <span>View</span>
+            <ArrowUpRight size={14} />
+          </Link>
         </Button>
       </CardFooter>
     </Card>
