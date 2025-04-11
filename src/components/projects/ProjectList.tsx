@@ -7,28 +7,104 @@ import { Input } from '@/components/ui/input';
 import ProjectCard from './ProjectCard';
 import { ProjectData } from '@/lib/types';
 import { useUser } from '@/contexts/UserContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const ProjectList = () => {
   const { user } = useUser();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<ProjectData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load projects from localStorage
-    const storedProjects = localStorage.getItem('wealthforge_projects');
-    if (storedProjects) {
-      const parsedProjects = JSON.parse(storedProjects);
-      
-      // Only show approved projects to regular users, admins can see all
-      const visibleProjects = user?.isAdmin 
-        ? parsedProjects 
-        : parsedProjects.filter((p: ProjectData) => p.status === 'approved');
+    async function fetchProjects() {
+      try {
+        setIsLoading(true);
         
-      setProjects(visibleProjects);
-      setFilteredProjects(visibleProjects);
+        let query = supabase
+          .from('projects')
+          .select(`
+            id,
+            title,
+            description,
+            category,
+            location,
+            budget,
+            status,
+            created_at,
+            profiles:creator_id (
+              id,
+              full_name,
+              avatar_url
+            )
+          `);
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        const formattedProjects: ProjectData[] = data.map(project => {
+          // Extract creator info from the profiles object
+          const creator = project.profiles;
+          
+          return {
+            id: project.id,
+            title: project.title,
+            description: project.description || '',
+            category: project.category || 'Other',
+            location: project.location || 'Remote',
+            budget: project.budget ? `$${project.budget}` : 'Not specified',
+            requiredSkills: [], // To be implemented with joining from project_required_skills table
+            creator: {
+              id: creator?.id || 'unknown',
+              name: creator?.full_name || 'Unknown User',
+              avatar: creator?.avatar_url,
+              initials: getInitials(creator?.full_name || 'Unknown User'),
+            },
+            createdAt: formatDate(project.created_at),
+            status: project.status as 'pending' | 'approved' | 'rejected'
+          };
+        });
+        
+        setProjects(formattedProjects);
+        setFilteredProjects(formattedProjects);
+      } catch (error: any) {
+        console.error('Error fetching projects:', error);
+        toast({
+          title: 'Error loading projects',
+          description: error.message || 'Failed to load projects',
+          variant: 'destructive',
+        });
+        setProjects([]);
+        setFilteredProjects([]);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [user]);
+    
+    fetchProjects();
+  }, [toast]);
+
+  const getInitials = (name: string): string => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    // Return date in format like "Apr 11, 2025"
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
@@ -49,6 +125,14 @@ const ProjectList = () => {
     
     setFilteredProjects(filtered);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <div className="animate-pulse text-muted-foreground">Loading projects...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

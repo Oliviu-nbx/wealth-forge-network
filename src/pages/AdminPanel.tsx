@@ -24,15 +24,37 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ProjectData } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
+
+type ProjectWithCreator = {
+  id: string;
+  title: string;
+  creator: {
+    name: string;
+  };
+  category: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+};
+
+type UserProfile = {
+  id: string;
+  name: string;
+  email: string;
+  isAdmin: boolean;
+  status: 'active' | 'suspended';
+  projects: number;
+  dateJoined: string;
+};
 
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useUser();
-  const [projects, setProjects] = useState<ProjectData[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [projects, setProjects] = useState<ProjectWithCreator[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Redirect if not admin
   useEffect(() => {
@@ -46,90 +68,183 @@ const AdminPanel = () => {
     }
   }, [user, navigate, toast]);
 
-  // Load projects from localStorage
+  // Load projects and users from Supabase
   useEffect(() => {
-    const storedProjects = localStorage.getItem('wealthforge_projects');
-    if (storedProjects) {
+    if (!user?.isAdmin) return;
+
+    async function fetchData() {
+      setIsLoading(true);
+      
       try {
-        const parsedProjects = JSON.parse(storedProjects);
+        // Fetch projects
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects')
+          .select(`
+            id,
+            title,
+            description,
+            category,
+            status,
+            created_at,
+            profiles:creator_id (
+              id,
+              full_name
+            )
+          `);
+          
+        if (projectsError) throw projectsError;
+
+        // Fetch profiles
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, is_admin, created_at');
+          
+        if (profilesError) throw profilesError;
         
-        // Ensure that each project has a valid status
-        const typedProjects: ProjectData[] = parsedProjects.map((project: any) => ({
-          ...project,
-          // Make sure status is one of the allowed values
-          status: ['pending', 'approved', 'rejected'].includes(project.status) 
-            ? project.status as 'pending' | 'approved' | 'rejected'
-            : 'pending' // Default to pending if invalid status
+        // Format projects for display
+        const formattedProjects: ProjectWithCreator[] = projectsData.map(project => ({
+          id: project.id,
+          title: project.title,
+          creator: {
+            name: project.profiles?.full_name || 'Unknown User',
+          },
+          category: project.category || 'Other',
+          status: project.status as 'pending' | 'approved' | 'rejected' || 'pending',
+          createdAt: formatDate(project.created_at),
         }));
         
-        setProjects(typedProjects);
-      } catch (error) {
-        console.error("Error parsing projects:", error);
-        setProjects([]);
+        setProjects(formattedProjects);
+        
+        // Format profiles for display
+        const formattedUsers: UserProfile[] = profilesData.map(profile => ({
+          id: profile.id,
+          name: profile.full_name || 'Unknown User',
+          email: profile.email || 'No email',
+          isAdmin: profile.is_admin || false,
+          status: 'active', // Default status
+          projects: 0, // Will calculate below
+          dateJoined: formatDate(profile.created_at),
+        }));
+        
+        // Count projects per user
+        formattedUsers.forEach(user => {
+          user.projects = projectsData.filter(
+            project => project.profiles?.id === user.id
+          ).length;
+        });
+        
+        setUsers(formattedUsers);
+      } catch (error: any) {
+        console.error('Error fetching admin data:', error);
+        toast({
+          title: "Failed to load data",
+          description: error.message || "There was a problem loading the admin data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     }
     
-    // For demo purposes, create mock users
-    setUsers([
-      {
-        id: 'admin-1',
-        name: 'Oliviu Admin',
-        email: 'oliviu@namebox.ro',
-        isAdmin: true,
-        status: 'active',
-        projects: 2,
-        dateJoined: '2025-04-01',
-      },
-      {
-        id: 'user-1',
-        name: 'Regular User',
-        email: 'user@example.com',
-        isAdmin: false,
-        status: 'active',
-        projects: 1,
-        dateJoined: '2025-04-05',
-      }
-    ]);
-  }, []);
+    fetchData();
+  }, [user, toast]);
 
-  const handleApproveProject = (id: string) => {
-    const updatedProjects = projects.map(project => 
-      project.id === id ? { ...project, status: 'approved' as const } : project
-    );
-    setProjects(updatedProjects);
-    localStorage.setItem('wealthforge_projects', JSON.stringify(updatedProjects));
-    toast({
-      title: "Project approved",
-      description: "The project has been approved and is now visible to users",
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
     });
   };
 
-  const handleRejectProject = (id: string) => {
-    const updatedProjects = projects.map(project => 
-      project.id === id ? { ...project, status: 'rejected' as const } : project
-    );
-    setProjects(updatedProjects);
-    localStorage.setItem('wealthforge_projects', JSON.stringify(updatedProjects));
-    toast({
-      title: "Project rejected",
-      description: "The project has been rejected",
-    });
+  const handleApproveProject = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: 'approved' })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setProjects(projects.map(project => 
+        project.id === id ? { ...project, status: 'approved' as const } : project
+      ));
+      
+      toast({
+        title: "Project approved",
+        description: "The project has been approved and is now visible to users",
+      });
+    } catch (error: any) {
+      console.error('Error approving project:', error);
+      toast({
+        title: "Failed to approve project",
+        description: error.message || "There was a problem approving the project",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteProject = (id: string) => {
-    const updatedProjects = projects.filter(project => project.id !== id);
-    setProjects(updatedProjects);
-    localStorage.setItem('wealthforge_projects', JSON.stringify(updatedProjects));
-    toast({
-      title: "Project deleted",
-      description: "The project has been permanently deleted",
-    });
+  const handleRejectProject = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: 'rejected' })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setProjects(projects.map(project => 
+        project.id === id ? { ...project, status: 'rejected' as const } : project
+      ));
+      
+      toast({
+        title: "Project rejected",
+        description: "The project has been rejected",
+      });
+    } catch (error: any) {
+      console.error('Error rejecting project:', error);
+      toast({
+        title: "Failed to reject project",
+        description: error.message || "There was a problem rejecting the project",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setProjects(projects.filter(project => project.id !== id));
+      
+      toast({
+        title: "Project deleted",
+        description: "The project has been permanently deleted",
+      });
+    } catch (error: any) {
+      console.error('Error deleting project:', error);
+      toast({
+        title: "Failed to delete project",
+        description: error.message || "There was a problem deleting the project",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleToggleUserStatus = (userId: string) => {
+    // As user status isn't in our database yet, just update the UI for demo purposes
     const updatedUsers = users.map(user => 
       user.id === userId 
-        ? { ...user, status: user.status === 'active' ? 'suspended' : 'active' } 
+        ? { ...user, status: user.status === 'active' ? 'suspended' as const : 'active' as const } 
         : user
     );
     setUsers(updatedUsers);
@@ -139,26 +254,56 @@ const AdminPanel = () => {
     });
   };
 
-  const handleToggleAdminStatus = (userId: string) => {
-    const updatedUsers = users.map(user => 
-      user.id === userId ? { ...user, isAdmin: !user.isAdmin } : user
-    );
-    setUsers(updatedUsers);
-    toast({
-      title: "Admin status updated",
-      description: "The user's admin status has been updated",
-    });
+  const handleToggleAdminStatus = async (userId: string, currentAdminStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_admin: !currentAdminStatus })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === userId ? { ...user, isAdmin: !user.isAdmin } : user
+      ));
+      
+      toast({
+        title: "Admin status updated",
+        description: "The user's admin status has been updated",
+      });
+    } catch (error: any) {
+      console.error('Error updating admin status:', error);
+      toast({
+        title: "Failed to update admin status",
+        description: error.message || "There was a problem updating the admin status",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredProjects = projects.filter(project => 
     project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    project.description.toLowerCase().includes(searchTerm.toLowerCase())
+    project.creator.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-pulse text-muted-foreground">Loading admin data...</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -364,7 +509,7 @@ const AdminPanel = () => {
                               <Button 
                                 variant="outline" 
                                 size="icon"
-                                onClick={() => handleToggleAdminStatus(user.id)}
+                                onClick={() => handleToggleAdminStatus(user.id, user.isAdmin)}
                                 className={user.isAdmin ? "text-amber-600 border-amber-600" : "text-blue-600 border-blue-600"}
                               >
                                 <Shield className="h-4 w-4" />

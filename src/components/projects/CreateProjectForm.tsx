@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { MapPin, DollarSign, Briefcase, Tags } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
-import { ProjectData } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
 
 const projectCategories = [
   { value: 'real-estate', label: 'Real Estate' },
@@ -45,7 +45,7 @@ const CreateProjectForm = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
@@ -60,41 +60,106 @@ const CreateProjectForm = () => {
     
     setIsSubmitting(true);
     
-    // Create new project object
-    const newProject: ProjectData = {
-      id: `project-${Date.now()}`,
-      title: formData.title,
-      description: formData.description,
-      category: formData.category || 'other',
-      location: formData.location || 'Remote',
-      budget: formData.budget || 'Not specified',
-      requiredSkills: formData.skills ? formData.skills.split(',').map(s => s.trim()) : [],
-      creator: {
-        id: user.id,
-        name: user.name,
-        initials: user.initials,
-        avatar: user.avatar
-      },
-      createdAt: new Date().toISOString().split('T')[0],
-      status: user.isAdmin ? 'approved' : 'pending'
-    };
-    
-    // Save to localStorage
-    const existingProjects = localStorage.getItem('wealthforge_projects');
-    const projects = existingProjects ? JSON.parse(existingProjects) : [];
-    projects.push(newProject);
-    localStorage.setItem('wealthforge_projects', JSON.stringify(projects));
-    
-    // Show success message
-    toast({
-      title: user.isAdmin ? "Project Created" : "Project Submitted for Review",
-      description: user.isAdmin 
-        ? "Your project has been successfully created" 
-        : "Your project has been submitted and is pending admin approval",
-    });
-    
-    setIsSubmitting(false);
-    navigate('/projects');
+    try {
+      // Format budget as a number if possible
+      let numericBudget = null;
+      if (formData.budget) {
+        // Extract numbers from the budget string (e.g., "$10K - $50K" -> 10000)
+        const budgetMatches = formData.budget.match(/\d+/g);
+        if (budgetMatches && budgetMatches.length > 0) {
+          numericBudget = parseInt(budgetMatches[0], 10);
+          // If it's indicated as K (thousands), multiply by 1000
+          if (formData.budget.includes('K')) {
+            numericBudget *= 1000;
+          } else if (formData.budget.includes('M')) {
+            numericBudget *= 1000000;
+          }
+        }
+      }
+      
+      // Create new project in Supabase
+      const { data: project, error } = await supabase
+        .from('projects')
+        .insert({
+          title: formData.title,
+          description: formData.description,
+          category: formData.category || 'other',
+          location: formData.location || 'Remote',
+          budget: numericBudget,
+          creator_id: user.id,
+          status: user.isAdmin ? 'approved' : 'pending'
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // If we have skills and the project was created successfully
+      if (formData.skills && project) {
+        const skills = formData.skills.split(',').map(s => s.trim());
+        
+        // For each skill, check if it exists or create it
+        for (const skillName of skills) {
+          // First check if the skill exists
+          const { data: existingSkill } = await supabase
+            .from('skills')
+            .select('id')
+            .eq('name', skillName)
+            .maybeSingle();
+          
+          if (existingSkill) {
+            // If skill exists, create the relationship with the project
+            await supabase
+              .from('project_required_skills')
+              .insert({
+                project_id: project.id,
+                skill_id: existingSkill.id
+              });
+          } else {
+            // If skill doesn't exist, create it first
+            const { data: newSkill, error: skillError } = await supabase
+              .from('skills')
+              .insert({ name: skillName })
+              .select()
+              .single();
+            
+            if (skillError) {
+              console.error('Error creating skill:', skillError);
+              continue;
+            }
+            
+            // Then create the relationship with the project
+            if (newSkill) {
+              await supabase
+                .from('project_required_skills')
+                .insert({
+                  project_id: project.id,
+                  skill_id: newSkill.id
+                });
+            }
+          }
+        }
+      }
+      
+      // Show success message
+      toast({
+        title: user.isAdmin ? "Project Created" : "Project Submitted for Review",
+        description: user.isAdmin 
+          ? "Your project has been successfully created" 
+          : "Your project has been submitted and is pending admin approval",
+      });
+      
+      navigate('/projects');
+    } catch (error: any) {
+      console.error('Error creating project:', error);
+      toast({
+        title: "Failed to create project",
+        description: error.message || "There was a problem creating your project",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
