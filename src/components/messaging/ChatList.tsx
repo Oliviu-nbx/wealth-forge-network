@@ -31,7 +31,7 @@ const sampleContacts: ChatContact[] = [
     id: 'contact1',
     name: 'David Rodriguez',
     initials: 'DR',
-    lastMessage: 'I'm interested in discussing the SaaS project further.',
+    lastMessage: 'I\'m interested in discussing the SaaS project further.',
     lastMessageTime: '10:45 AM',
     unreadCount: 2,
     online: true,
@@ -60,7 +60,7 @@ const sampleMessages: Record<string, ChatMessage[]> = {
   contact1: [
     {
       id: 'msg1',
-      content: 'Hello, I saw your project post and I'm interested in learning more.',
+      content: 'Hello, I saw your project post and I\'m interested in learning more.',
       sender: 'other',
       timestamp: 'Yesterday, 2:30 PM',
       read: true,
@@ -74,7 +74,7 @@ const sampleMessages: Record<string, ChatMessage[]> = {
     },
     {
       id: 'msg3',
-      content: 'I'm particularly interested in the technical architecture and how you're planning to approach the market.',
+      content: 'I\'m particularly interested in the technical architecture and how you\'re planning to approach the market.',
       sender: 'other',
       timestamp: 'Yesterday, 3:45 PM',
       read: true,
@@ -88,14 +88,14 @@ const sampleMessages: Record<string, ChatMessage[]> = {
     },
     {
       id: 'msg5',
-      content: 'That sounds great! I'd love to discuss the architecture with you. Do you have any specific ideas based on your past experience?',
+      content: 'That sounds great! I\'d love to discuss the architecture with you. Do you have any specific ideas based on your past experience?',
       sender: 'me',
       timestamp: 'Yesterday, 4:30 PM',
       read: true,
     },
     {
       id: 'msg6',
-      content: 'I'm interested in discussing the SaaS project further. When would be a good time to schedule a call?',
+      content: 'I\'m interested in discussing the SaaS project further. When would be a good time to schedule a call?',
       sender: 'other',
       timestamp: 'Today, 10:45 AM',
       read: false,
@@ -104,7 +104,7 @@ const sampleMessages: Record<string, ChatMessage[]> = {
   contact2: [
     {
       id: 'msg1',
-      content: 'Hi there, I'm interested in your real estate investment opportunity.',
+      content: 'Hi there, I\'m interested in your real estate investment opportunity.',
       sender: 'me',
       timestamp: '3 days ago',
       read: true,
@@ -118,7 +118,7 @@ const sampleMessages: Record<string, ChatMessage[]> = {
     },
     {
       id: 'msg3',
-      content: 'I'd prefer to be an active investor. I have experience managing properties in the Miami area.',
+      content: 'I\'d prefer to be an active investor. I have experience managing properties in the Miami area.',
       sender: 'me',
       timestamp: '2 days ago',
       read: true,
