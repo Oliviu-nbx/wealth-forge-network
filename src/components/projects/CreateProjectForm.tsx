@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { MapPin, DollarSign, Briefcase, Tags } from 'lucide-react';
+import { useUser } from '@/contexts/UserContext';
+import { ProjectData } from '@/lib/types';
 
 const projectCategories = [
   { value: 'real-estate', label: 'Real Estate' },
@@ -22,6 +24,7 @@ const projectCategories = [
 const CreateProjectForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useUser();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -44,17 +47,54 @@ const CreateProjectForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to create a project",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Project Created",
-        description: "Your project has been successfully posted",
-      });
-      setIsSubmitting(false);
-      navigate('/projects');
-    }, 1500);
+    // Create new project object
+    const newProject: ProjectData = {
+      id: `project-${Date.now()}`,
+      title: formData.title,
+      description: formData.description,
+      category: formData.category || 'other',
+      location: formData.location || 'Remote',
+      budget: formData.budget || 'Not specified',
+      requiredSkills: formData.skills ? formData.skills.split(',').map(s => s.trim()) : [],
+      creator: {
+        id: user.id,
+        name: user.name,
+        initials: user.initials,
+        avatar: user.avatar
+      },
+      createdAt: new Date().toISOString().split('T')[0],
+      status: user.isAdmin ? 'approved' : 'pending'
+    };
+    
+    // Save to localStorage
+    const existingProjects = localStorage.getItem('wealthforge_projects');
+    const projects = existingProjects ? JSON.parse(existingProjects) : [];
+    projects.push(newProject);
+    localStorage.setItem('wealthforge_projects', JSON.stringify(projects));
+    
+    // Show success message
+    toast({
+      title: user.isAdmin ? "Project Created" : "Project Submitted for Review",
+      description: user.isAdmin 
+        ? "Your project has been successfully created" 
+        : "Your project has been submitted and is pending admin approval",
+    });
+    
+    setIsSubmitting(false);
+    navigate('/projects');
   };
 
   return (
@@ -153,7 +193,7 @@ const CreateProjectForm = () => {
                   id="skills" 
                   name="skills" 
                   className="pl-10" 
-                  placeholder="e.g. React, Finance, Real Estate"
+                  placeholder="e.g. React, Finance, Real Estate (comma separated)"
                   value={formData.skills}
                   onChange={handleChange}
                 />
