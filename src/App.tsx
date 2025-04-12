@@ -22,12 +22,18 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useUser();
   
+  // Show a loading indicator while checking authentication
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
   }
   
+  // Redirect to login if user is not authenticated
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
   
   return <>{children}</>;
@@ -37,67 +43,89 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useUser();
   
+  // Show a loading indicator while checking authentication
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
   }
   
+  // Redirect to dashboard if user is not admin
   if (!user || !user.isAdmin) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
   
   return <>{children}</>;
 };
 
-const AppRoutes = () => (
-  <Routes>
-    <Route path="/" element={<Index />} />
-    <Route path="/login" element={<Login />} />
-    <Route 
-      path="/dashboard" 
-      element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } 
-    />
-    <Route 
-      path="/profile" 
-      element={
-        <ProtectedRoute>
-          <Profile />
-        </ProtectedRoute>
-      } 
-    />
-    <Route path="/projects" element={<Projects />} />
-    <Route path="/projects/:id" element={<ProjectDetails />} />
-    <Route 
-      path="/projects/create" 
-      element={
-        <ProtectedRoute>
-          <CreateProject />
-        </ProtectedRoute>
-      } 
-    />
-    <Route 
-      path="/messages" 
-      element={
-        <ProtectedRoute>
-          <Messages />
-        </ProtectedRoute>
-      } 
-    />
-    <Route 
-      path="/admin" 
-      element={
-        <AdminRoute>
-          <AdminPanel />
-        </AdminRoute>
-      } 
-    />
-    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-    <Route path="*" element={<NotFound />} />
-  </Routes>
-);
+const AppRoutes = () => {
+  const { user, isLoading } = useUser();
+  
+  // Show a base loading indicator while checking initial auth state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse">Loading authentication state...</div>
+      </div>
+    );
+  }
+  
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Index />} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/projects" element={<Projects />} />
+      <Route path="/projects/:id" element={<ProjectDetails />} />
+      
+      {/* Protected routes */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/profile" 
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/projects/create" 
+        element={
+          <ProtectedRoute>
+            <CreateProject />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/messages" 
+        element={
+          <ProtectedRoute>
+            <Messages />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin" 
+        element={
+          <AdminRoute>
+            <AdminPanel />
+          </AdminRoute>
+        } 
+      />
+      {/* Catch-all route */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

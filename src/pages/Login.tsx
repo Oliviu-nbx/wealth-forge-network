@@ -41,7 +41,7 @@ const Login = () => {
     
     try {
       await login(email, password);
-      navigate('/dashboard');
+      // Let the useEffect handle the redirect
     } catch (error) {
       // Error is handled in the login function
       console.error('Login error:', error);

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -48,19 +49,46 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .eq('id', session.user.id)
               .single();
 
-            if (error) throw error;
-
-            // Create user object with data from auth and profile
-            const userData: User = {
-              id: session.user.id,
-              email: session.user.email || '',
-              name: profile?.full_name || session.user.email?.split('@')[0] || 'User',
-              isAdmin: Boolean(profile?.is_admin),
-              avatar: profile?.avatar_url || undefined,
-              initials: getInitials(profile?.full_name || session.user.email || 'User'),
-            };
-            
-            setUser(userData);
+            if (error) {
+              // If profile doesn't exist yet (first login), create it
+              if (error.code === 'PGRST116') {
+                // Try to create a profile
+                const { error: insertError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    id: session.user.id,
+                    full_name: session.user.email?.split('@')[0] || 'User',
+                    is_admin: 0
+                  });
+                
+                if (insertError) throw insertError;
+                
+                // Created profile, now set up basic user data
+                const userData: User = {
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  name: session.user.email?.split('@')[0] || 'User',
+                  isAdmin: false,
+                  initials: getInitials(session.user.email || 'User'),
+                };
+                
+                setUser(userData);
+              } else {
+                throw error;
+              }
+            } else {
+              // Profile exists, create user object with data
+              const userData: User = {
+                id: session.user.id,
+                email: session.user.email || '',
+                name: profile?.full_name || session.user.email?.split('@')[0] || 'User',
+                isAdmin: Boolean(profile?.is_admin),
+                avatar: profile?.avatar_url || undefined,
+                initials: getInitials(profile?.full_name || session.user.email || 'User'),
+              };
+              
+              setUser(userData);
+            }
           } catch (error) {
             console.error('Error fetching user profile:', error);
             setUser(null);
@@ -93,19 +121,46 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', session.user.id)
           .single();
 
-        if (error) throw error;
-
-        // Create user object with data from auth and profile
-        const userData: User = {
-          id: session.user.id,
-          email: session.user.email || '',
-          name: profile?.full_name || session.user.email?.split('@')[0] || 'User',
-          isAdmin: Boolean(profile?.is_admin),
-          avatar: profile?.avatar_url || undefined,
-          initials: getInitials(profile?.full_name || session.user.email || 'User'),
-        };
-        
-        setUser(userData);
+        if (error) {
+          // If profile doesn't exist (first login after signup), create a basic one
+          if (error.code === 'PGRST116') {
+            // Try to create a profile
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: session.user.id,
+                full_name: session.user.email?.split('@')[0] || 'User',
+                is_admin: 0
+              });
+              
+            if (insertError) throw insertError;
+            
+            // Set basic user data
+            const userData: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.email?.split('@')[0] || 'User',
+              isAdmin: false,
+              initials: getInitials(session.user.email || 'User'),
+            };
+            
+            setUser(userData);
+          } else {
+            throw error;
+          }
+        } else {
+          // Create user object with data from auth and profile
+          const userData: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: profile?.full_name || session.user.email?.split('@')[0] || 'User',
+            isAdmin: Boolean(profile?.is_admin),
+            avatar: profile?.avatar_url || undefined,
+            initials: getInitials(profile?.full_name || session.user.email || 'User'),
+          };
+          
+          setUser(userData);
+        }
       }
     } catch (error) {
       console.error('Error fetching initial session:', error);
