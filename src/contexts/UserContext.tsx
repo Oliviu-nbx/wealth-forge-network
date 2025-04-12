@@ -42,10 +42,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           try {
-            // Fetch user profile including admin status
+            // Fetch user profile
             const { data: profile, error } = await supabase
               .from('profiles')
-              .select('full_name, avatar_url, is_admin')
+              .select('*')
               .eq('id', session.user.id)
               .single();
 
@@ -56,7 +56,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
               id: session.user.id,
               email: session.user.email || '',
               name: profile?.full_name || session.user.email?.split('@')[0] || 'User',
-              isAdmin: profile?.is_admin || false,
+              isAdmin: Boolean(profile?.is_admin),
               avatar: profile?.avatar_url || undefined,
               initials: getInitials(profile?.full_name || session.user.email || 'User'),
             };
@@ -87,10 +87,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        // Fetch user profile including admin status
+        // Fetch user profile
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('full_name, avatar_url, is_admin')
+          .select('*')
           .eq('id', session.user.id)
           .single();
 
@@ -101,7 +101,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: session.user.id,
           email: session.user.email || '',
           name: profile?.full_name || session.user.email?.split('@')[0] || 'User',
-          isAdmin: profile?.is_admin || false,
+          isAdmin: Boolean(profile?.is_admin),
           avatar: profile?.avatar_url || undefined,
           initials: getInitials(profile?.full_name || session.user.email || 'User'),
         };

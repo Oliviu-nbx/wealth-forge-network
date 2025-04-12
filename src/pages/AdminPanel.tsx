@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -56,7 +55,6 @@ const AdminPanel = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Redirect if not admin
   useEffect(() => {
     if (!user?.isAdmin) {
       toast({
@@ -68,7 +66,6 @@ const AdminPanel = () => {
     }
   }, [user, navigate, toast]);
 
-  // Load projects and users from Supabase
   useEffect(() => {
     if (!user?.isAdmin) return;
 
@@ -76,7 +73,6 @@ const AdminPanel = () => {
       setIsLoading(true);
       
       try {
-        // Fetch projects
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
           .select(`
@@ -94,14 +90,12 @@ const AdminPanel = () => {
           
         if (projectsError) throw projectsError;
 
-        // Fetch profiles
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, full_name, email, is_admin, created_at');
+          .select('*');
           
         if (profilesError) throw profilesError;
         
-        // Format projects for display
         const formattedProjects: ProjectWithCreator[] = projectsData.map(project => ({
           id: project.id,
           title: project.title,
@@ -115,18 +109,16 @@ const AdminPanel = () => {
         
         setProjects(formattedProjects);
         
-        // Format profiles for display
         const formattedUsers: UserProfile[] = profilesData.map(profile => ({
           id: profile.id,
           name: profile.full_name || 'Unknown User',
           email: profile.email || 'No email',
-          isAdmin: profile.is_admin || false,
+          isAdmin: Boolean(profile.is_admin),
           status: 'active', // Default status
           projects: 0, // Will calculate below
           dateJoined: formatDate(profile.created_at),
         }));
         
-        // Count projects per user
         formattedUsers.forEach(user => {
           user.projects = projectsData.filter(
             project => project.profiles?.id === user.id
@@ -167,7 +159,6 @@ const AdminPanel = () => {
         
       if (error) throw error;
       
-      // Update local state
       setProjects(projects.map(project => 
         project.id === id ? { ...project, status: 'approved' as const } : project
       ));
@@ -195,7 +186,6 @@ const AdminPanel = () => {
         
       if (error) throw error;
       
-      // Update local state
       setProjects(projects.map(project => 
         project.id === id ? { ...project, status: 'rejected' as const } : project
       ));
@@ -223,7 +213,6 @@ const AdminPanel = () => {
         
       if (error) throw error;
       
-      // Update local state
       setProjects(projects.filter(project => project.id !== id));
       
       toast({
@@ -241,7 +230,6 @@ const AdminPanel = () => {
   };
 
   const handleToggleUserStatus = (userId: string) => {
-    // As user status isn't in our database yet, just update the UI for demo purposes
     const updatedUsers = users.map(user => 
       user.id === userId 
         ? { ...user, status: user.status === 'active' ? 'suspended' as const : 'active' as const } 
@@ -263,7 +251,6 @@ const AdminPanel = () => {
         
       if (error) throw error;
       
-      // Update local state
       setUsers(users.map(user => 
         user.id === userId ? { ...user, isAdmin: !user.isAdmin } : user
       ));

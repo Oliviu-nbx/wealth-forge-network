@@ -59,6 +59,7 @@ export type Database = {
           full_name: string | null
           id: string
           investment_goals: string[] | null
+          is_admin: number | null
           latitude: number | null
           location: string | null
           longitude: number | null
@@ -71,6 +72,7 @@ export type Database = {
           full_name?: string | null
           id: string
           investment_goals?: string[] | null
+          is_admin?: number | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
@@ -83,6 +85,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           investment_goals?: string[] | null
+          is_admin?: number | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
