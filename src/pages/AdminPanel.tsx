@@ -39,7 +39,7 @@ type ProjectWithCreator = {
 type UserProfile = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   isAdmin: boolean;
   status: 'active' | 'suspended';
   projects: number;
@@ -112,10 +112,10 @@ const AdminPanel = () => {
         const formattedUsers: UserProfile[] = profilesData.map(profile => ({
           id: profile.id,
           name: profile.full_name || 'Unknown User',
-          email: profile.email || 'No email',
+          email: profile.email || null,
           isAdmin: Boolean(profile.is_admin),
-          status: 'active', // Default status
-          projects: 0, // Will calculate below
+          status: 'active',
+          projects: 0,
           dateJoined: formatDate(profile.created_at),
         }));
         
@@ -244,9 +244,11 @@ const AdminPanel = () => {
 
   const handleToggleAdminStatus = async (userId: string, currentAdminStatus: boolean) => {
     try {
+      const adminValue = currentAdminStatus ? 0 : 1;
+      
       const { error } = await supabase
         .from('profiles')
-        .update({ is_admin: !currentAdminStatus })
+        .update({ is_admin: adminValue })
         .eq('id', userId);
         
       if (error) throw error;
@@ -276,7 +278,7 @@ const AdminPanel = () => {
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (isLoading) {
@@ -478,7 +480,7 @@ const AdminPanel = () => {
                       filteredUsers.map((user) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.name}</TableCell>
-                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.email || 'No email'}</TableCell>
                           <TableCell>
                             <Badge variant={user.isAdmin ? "default" : "secondary"}>
                               {user.isAdmin ? "Admin" : "User"}
