@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,20 +11,13 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { user, isLoading, login } = useUser();
+  const { login } = useUser();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   
-  // Redirect if user is already logged in
-  useEffect(() => {
-    if (user && !isLoading) {
-      navigate('/dashboard');
-    }
-  }, [user, isLoading, navigate]);
-
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -41,7 +34,8 @@ const Login = () => {
     
     try {
       await login(email, password);
-      // Let the useEffect handle the redirect
+      // Explicitly navigate to dashboard after successful login
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       // Error is handled in the login function
       console.error('Login error:', error);
@@ -75,11 +69,22 @@ const Login = () => {
       if (data.user) {
         toast({
           title: "Account Created",
-          description: "Please check your email to confirm your account",
+          description: "Your account has been created successfully",
         });
         
         // Switch back to login view
         setIsSignUp(false);
+        
+        // If email confirmation is disabled in Supabase, redirect to dashboard
+        if (!data.session) {
+          toast({
+            title: "Please check your email",
+            description: "We've sent you a confirmation email. Please verify your account before logging in.",
+          });
+        } else {
+          // User is already authenticated, redirect to dashboard
+          navigate('/dashboard', { replace: true });
+        }
       }
     } catch (error: any) {
       toast({
@@ -91,14 +96,6 @@ const Login = () => {
       setIsSubmitting(false);
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
