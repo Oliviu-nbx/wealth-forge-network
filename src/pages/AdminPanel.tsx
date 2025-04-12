@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -109,10 +110,14 @@ const AdminPanel = () => {
         
         setProjects(formattedProjects);
         
+        // For profiles, we don't have direct access to emails in the profiles table
+        // Email is in auth.users which we can't query directly from the client
+        // So we'll use the email from the current user for their profile, and null for others
         const formattedUsers: UserProfile[] = profilesData.map(profile => ({
           id: profile.id,
           name: profile.full_name || 'Unknown User',
-          email: profile.email || null,
+          // We don't have access to emails directly from profiles table
+          email: profile.id === user.id ? user.email : null,
           isAdmin: Boolean(profile.is_admin),
           status: 'active',
           projects: 0,
