@@ -1,19 +1,13 @@
-
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Send, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface ChatMessage {
-  id: string;
-  content: string;
-  sender: 'me' | 'other';
-  timestamp: string;
-  read: boolean;
-}
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useMessages } from '@/hooks/useMessages';
+import { useUser } from '@/contexts/UserContext';
 
 interface ChatContact {
   id: string;
@@ -56,86 +50,11 @@ const sampleContacts: ChatContact[] = [
   },
 ];
 
-const sampleMessages: Record<string, ChatMessage[]> = {
-  contact1: [
-    {
-      id: 'msg1',
-      content: "Hello, I saw your project post and I'm interested in learning more.",
-      sender: 'other',
-      timestamp: 'Yesterday, 2:30 PM',
-      read: true,
-    },
-    {
-      id: 'msg2',
-      content: 'Hi David! Thanks for reaching out. What aspects of the project are you most interested in?',
-      sender: 'me',
-      timestamp: 'Yesterday, 3:15 PM',
-      read: true,
-    },
-    {
-      id: 'msg3',
-      content: "I'm particularly interested in the technical architecture and how you're planning to approach the market.",
-      sender: 'other',
-      timestamp: 'Yesterday, 3:45 PM',
-      read: true,
-    },
-    {
-      id: 'msg4',
-      content: 'I have experience building similar solutions and I think I could bring a lot of value to the team.',
-      sender: 'other',
-      timestamp: 'Yesterday, 3:47 PM',
-      read: true,
-    },
-    {
-      id: 'msg5',
-      content: "That sounds great! I'd love to discuss the architecture with you. Do you have any specific ideas based on your past experience?",
-      sender: 'me',
-      timestamp: 'Yesterday, 4:30 PM',
-      read: true,
-    },
-    {
-      id: 'msg6',
-      content: "I'm interested in discussing the SaaS project further. When would be a good time to schedule a call?",
-      sender: 'other',
-      timestamp: 'Today, 10:45 AM',
-      read: false,
-    },
-  ],
-  contact2: [
-    {
-      id: 'msg1',
-      content: "Hi there, I'm interested in your real estate investment opportunity.",
-      sender: 'me',
-      timestamp: '3 days ago',
-      read: true,
-    },
-    {
-      id: 'msg2',
-      content: 'Great to hear from you! Are you looking to be an active or passive investor?',
-      sender: 'other',
-      timestamp: '3 days ago',
-      read: true,
-    },
-    {
-      id: 'msg3',
-      content: "I'd prefer to be an active investor. I have experience managing properties in the Miami area.",
-      sender: 'me',
-      timestamp: '2 days ago',
-      read: true,
-    },
-    {
-      id: 'msg4',
-      content: 'When can we schedule a call to discuss the investment details?',
-      sender: 'other',
-      timestamp: 'Yesterday',
-      read: true,
-    },
-  ],
-};
-
 const ChatList = () => {
   const [selectedContact, setSelectedContact] = useState<string | null>('contact1');
   const [messageInput, setMessageInput] = useState('');
+  const { user } = useUser();
+  const { messages, isLoading, sendMessage } = useMessages(selectedContact ?? undefined);
 
   const handleContactSelect = (contactId: string) => {
     setSelectedContact(contactId);
@@ -144,20 +63,13 @@ const ChatList = () => {
   const handleSendMessage = () => {
     if (messageInput.trim() === '') return;
     
-    // In a real app, you would send the message to your backend here
-    console.log('Sending message:', messageInput);
-    
-    // Clear the input
+    sendMessage(messageInput);
     setMessageInput('');
   };
 
   const activeContact = selectedContact 
     ? sampleContacts.find(contact => contact.id === selectedContact) 
     : null;
-    
-  const activeMessages = selectedContact 
-    ? sampleMessages[selectedContact] || []
-    : [];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 h-[calc(100vh-8rem)] overflow-hidden rounded-lg border">
@@ -173,7 +85,7 @@ const ChatList = () => {
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto">
+        <ScrollArea className="flex-1">
           {sampleContacts.map((contact) => (
             <div
               key={contact.id}
@@ -210,7 +122,7 @@ const ChatList = () => {
               ) : null}
             </div>
           ))}
-        </div>
+        </ScrollArea>
       </div>
       
       {/* Chat window */}
@@ -240,31 +152,33 @@ const ChatList = () => {
             </div>
             
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {activeMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex",
-                    message.sender === 'me' ? "justify-end" : "justify-start"
-                  )}
-                >
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-4">
+                {messages.map((message) => (
                   <div
+                    key={message.id}
                     className={cn(
-                      "max-w-[80%] rounded-lg p-3",
-                      message.sender === 'me'
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
+                      "flex",
+                      message.sender_id === user?.id ? "justify-end" : "justify-start"
                     )}
                   >
-                    <p className="text-sm">{message.content}</p>
-                    <span className="text-xs opacity-70 block text-right mt-1">
-                      {message.timestamp}
-                    </span>
+                    <div
+                      className={cn(
+                        "max-w-[80%] rounded-lg p-3",
+                        message.sender_id === user?.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      )}
+                    >
+                      <p className="text-sm">{message.content}</p>
+                      <span className="text-xs opacity-70 block text-right mt-1">
+                        {new Date(message.created_at).toLocaleTimeString()}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </ScrollArea>
             
             {/* Message input */}
             <div className="p-4 border-t">
