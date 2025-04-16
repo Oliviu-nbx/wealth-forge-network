@@ -15,13 +15,13 @@ interface Message {
 }
 
 export const useMessages = (contactId?: string) => {
-  const { user } = useUser();
+  const { user, isLoading: userLoading } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<Message[]>([]);
 
-  const { data: fetchedMessages, isLoading } = useQuery({
-    queryKey: ['messages', contactId],
+  const { data: fetchedMessages, isLoading: messagesLoading } = useQuery({
+    queryKey: ['messages', contactId, user?.id],
     queryFn: async () => {
       if (!contactId || !user?.id) return [];
 
@@ -43,7 +43,7 @@ export const useMessages = (contactId?: string) => {
 
       return data as Message[];
     },
-    enabled: !!contactId && !!user?.id,
+    enabled: !!contactId && !!user?.id && !userLoading,
   });
 
   const sendMessage = useMutation({
@@ -125,7 +125,7 @@ export const useMessages = (contactId?: string) => {
 
   return {
     messages,
-    isLoading,
+    isLoading: userLoading || messagesLoading,
     sendMessage: (content: string) => sendMessage.mutate(content),
     markAsRead: (messageId: string) => markAsRead.mutate(messageId),
   };
